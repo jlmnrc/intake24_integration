@@ -7,7 +7,7 @@
     {
       "name": "John Liman",
       "email": "john.liman@monash.edu",
-      "institution": "Monash University, Australia"
+      "institution": "SPHPM, Monash University, Australia"
     }
   ],
 
@@ -62,4 +62,5 @@
     "redcap-version-min": "8.0.0",
     "redcap-version-max": ""
   }
+
 }
