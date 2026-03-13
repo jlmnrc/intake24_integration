@@ -1,7 +1,6 @@
 ### REDCap External Module
 ********************************************************************************
 # Intake24 Survey Integration
-John Liman, Helix, Monash University, https://www.monash.edu/researchinfrastructure/helix
 ********************************************************************************
 ## Introduction
 [Intake24](https://intake24.com/) is a nutrient survey tool that provides a graphical food/drink survey for the research community.  REDCap is usually used to capture participant information but then re-directed to the intake24.com survey for the nutrition survey data capture.  This external module will link the REDCap record with the user in intake24.  The module will create a new user at intake24.com once they have completed their survey at REDCap (e.g. consent, demographics, etc) and link it with the record id of REDCap.  The module will then store the unique intake24.com URL for that particular record for reference.
