@@ -70,7 +70,7 @@ class Intake24Integration extends AbstractExternalModule
 
                 $saveResponse = $this::saveMyData($project_id, $arrVarNames);
 
-                if (count($saveResponse['errors'])>0) {
+                if (count((array)$saveResponse['errors'])>0) {
                     $errors = $saveResponse['errors'];
 
                     $errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
