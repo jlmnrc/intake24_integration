@@ -2,12 +2,12 @@
   "name": "Intake24.com Integration",
   "namespace": "Intake24\\Intake24Integration",
   "description": "This module will generate intake24.com user automatically and put the link at the specified REDCap field.",
-
+  "framework-version": 10,
   "authors": [
     {
       "name": "John Liman",
       "email": "john.liman@monash.edu",
-      "institution": "Monash University, Australia"
+      "institution": "SPHPM, Monash University, Australia"
     }
   ],
 
