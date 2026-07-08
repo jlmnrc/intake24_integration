@@ -32,8 +32,6 @@ class Intake24Integration extends AbstractExternalModule
             $intake24_version = 'v4';
         }
 
-        $calculated_user_id = $_POST[$user_id] ?? null; // the value of the calculated user id
-
         $triggering_instrument_name = $settings['triggering_instrument_name']['value'];
         $generated_intake24_url     = $settings['generated_intake24_url']['value'];
 
@@ -44,12 +42,13 @@ class Intake24Integration extends AbstractExternalModule
 
             $existing_data = $recordData[$record][$event_id][$generated_intake24_url] ?? null;
 
-            // The User ID may be a calculated field that is not part of this submit POST,
-            // in which case $_POST is empty; fall back to the value saved on the record.
+            // Read the User ID from the SAVED record, never from the raw $_POST.
+            // redcap_save_record fires after the submission is stored, so the value —
+            // including calculated fields that are not part of the submit POST — is
+            // already on the record. This also removes $_POST as a Psalm taint source
+            // for the generated link (TaintedHtml/TaintedTextWithQuotes/TaintedHeader).
             // Intake24 rejects the token if "username" is empty, so this must be set.
-            if (empty($calculated_user_id)) {
-                $calculated_user_id = $recordData[$record][$event_id][$user_id] ?? null;
-            }
+            $calculated_user_id = $recordData[$record][$event_id][$user_id] ?? null;
 
             if (!$existing_data)
             {
@@ -196,14 +195,39 @@ class Intake24Integration extends AbstractExternalModule
     protected function redirect($url) {
         if (headers_sent()) {
             // If contents already output, use javascript to redirect instead.
-            echo '<script>window.location.href="' . $url . '";</script>';
+            echo '<script>window.location.href=' . $this->encodeForJavascriptStringLiteral($url) . ';</script>';
         }
         else {
             // Redirect using PHP.
-            header('Location: ' . $url);
+            header('Location: ' . $this->sanitizeForHeaderValue($url));
         }
 
         $this->exitAfterHook();
+    }
+
+    /**
+     * Encodes a value as a JavaScript string literal that is safe to place in a
+     * <script> block. This preserves the URL value while preventing quotes or
+     * HTML/script delimiters from breaking out of the assignment.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    private function encodeForJavascriptStringLiteral($value) {
+        $encoded = json_encode((string) $value, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+        return $encoded === false ? '""' : $encoded;
+    }
+
+    /**
+     * Removes raw header line separators before a value is concatenated into a
+     * single HTTP header field. Valid URLs do not contain raw CR/LF characters;
+     * percent-encoded characters such as %0D or %0A are left unchanged.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    private function sanitizeForHeaderValue($value) {
+        return str_replace(array("\r", "\n"), '', (string) $value);
     }
 
     public function updateFromIntake24() {
