@@ -2,14 +2,21 @@
   "name": "Intake24.com Integration",
   "namespace": "Intake24\\Intake24Integration",
   "description": "This module will generate intake24.com user automatically and put the link at the specified REDCap field.",
-  "framework-version": 10,
+
   "authors": [
     {
       "name": "John Liman",
       "email": "john.liman@monash.edu",
-      "institution": "SPHPM, Monash University, Australia"
+      "institution": "Monash University, Australia"
     }
   ],
+
+  "no-auth-pages": [
+    "intake24_update"
+  ],
+
+  "links": {
+  },
 
   "permissions": [
     "redcap_save_record"
@@ -17,7 +24,17 @@
 
   "project-settings": [
     {
-      "name": "Intake24.com Survey URL, e.g. https://intake24.com/surveys/LEHS_Survey",
+      "name": "Intake24 version of this survey's instance",
+      "key": "intake24_version",
+      "required": true,
+      "type": "dropdown",
+      "choices": [
+        { "value": "v4", "name": "Intake24 v4 (path-based /create-user/ link)" },
+        { "value": "v3", "name": "Intake24 v3 (legacy ?createUser= link)" }
+      ]
+    },
+    {
+      "name": "Intake24.com Survey URL. v4 e.g. https://your-host.intake24.app/survey/MySurvey ; v3 e.g. https://intake24.com/surveys/MySurvey",
       "key": "survey_url",
       "required": true,
       "type": "text"
@@ -30,37 +47,183 @@
     },
     {
       "name": "Intake24 Redirect URL stored in the JSON payload",
-      "key": "redirect_url",
       "required": true,
+      "key": "redirect_url",
       "type": "text"
     },
     {
       "name": "Intake24 User ID stored in the JSON payload",
-      "key": "user_id",
       "required": true,
+      "key": "user_id",
       "type": "field-list"
     },
     {
       "name": "The instrument/form name that will trigger the creation of intake24 URL",
-      "key": "triggering_instrument_name",
       "required": true,
+      "key": "triggering_instrument_name",
       "type": "form-list"
     },
     {
       "name": "The field name that stores the generated intake24 URL with the JSON payload",
-      "key": "generated_intake24_url",
       "required": true,
+      "key": "generated_intake24_url",
       "type": "field-list"
-    }
+    },
+    {
 
+      "key": "schedule-enabled",
+      "name": "Enable Scheduling?",
+      "type": "checkbox"
+    },
+
+    {
+      "name": "The field name that stores the recall #1 schedule date/time",
+      "key": "schedule_time_1",
+      "required": true,
+      "type": "field-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The field name that stores the intake24 recall #1 completed date/time",
+      "key": "completed_time_1",
+      "required": true,
+      "type": "field-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The field name that stores the recall #2 schedule date/time",
+      "key": "schedule_time_2",
+      "required": true,
+      "type": "field-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The field name that stores the intake24 recall #2 completed date/time",
+      "key": "completed_time_2",
+      "required": true,
+      "type": "field-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The field name that stores the recall #3 schedule date/time",
+      "key": "schedule_time_3",
+      "required": true,
+      "type": "field-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The field name that stores the intake24 recall #3 completed date/time",
+      "key": "completed_time_3",
+      "required": true,
+      "type": "field-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The instrument/form to be marked as completed when all 3 recalls are completed",
+      "required": true,
+      "key": "scheduling_instrument_name",
+      "type": "form-list",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "API Token used to update the record",
+      "required": true,
+      "key": "api_token",
+      "type": "text",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Secret for verifying incoming Intake24 notifications (the 'JWT secret for M2M communication' in the survey's External communication settings). Leave blank to reuse the create-user Secret Key above.",
+      "key": "notification_secret",
+      "required": false,
+      "type": "text",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Reject incoming notifications that are not validly signed? Leave OFF first to confirm valid signatures are arriving (outcome is logged either way), then turn ON to enforce.",
+      "key": "require_signed_notifications",
+      "type": "checkbox",
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    }
   ],
+
 
   "system-settings": [
   ],
-
   "compatibility": {
-    "redcap-version-min": "8.0.0",
+    "php-version-min": "7.0.0",
+    "php-version-max": "",
+    "redcap-version-min": "10.0.0",
     "redcap-version-max": ""
   }
-
 }
