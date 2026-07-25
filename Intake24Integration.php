@@ -133,7 +133,7 @@ class Intake24Integration extends AbstractExternalModule
                     $schedule_time1_field_name = $settings['schedule_time_1']['value'];
                     $arrVarNames = array_merge($arrVarNames,
                         array(
-                            $schedule_time1_field_name => $this->calculateReminderDate($currDate->format('Y-m-d H:i:s'))
+                            $schedule_time1_field_name => $this->calculateReminderDate($currDate->format('Y-m-d H:i:s'), ($settings['reminder_days']['value'] ?? 3))
                         )
                     );
                 }
@@ -320,21 +320,57 @@ class Intake24Integration extends AbstractExternalModule
             self::errorResponse("The web service is triggered but schedule is not enabled at the external module config.");
         }
 
-        // Decode the single JSON package sent by Intake24 v4 in the request body.
+        // Decode the single JSON package sent by Intake24 in the request body.
         $json_data = json_decode($raw_body);
+
+        // The submission fields live in different places depending on version:
+        //   v3 (flat):   { "userName": "<id>", "endTime": "...", ... }
+        //   v4 (nested): { "type":"survey.session.submitted", "submissionId":"...",
+        //                  "data": { "endTime":"...",
+        //                            "user": { "aliases": [ { "username":"<id>" } ] } } }
+        // In v4 the participant username (= REDCap record id) is nested under
+        // data.user.aliases[0].username and the completion time under data.endTime.
+        $userName = null;
+        $endTime  = null;
+        if (is_object($json_data)) {
+            if ($intake24_version === 'v4' && isset($json_data->data) && is_object($json_data->data)) {
+                $submission = $json_data->data;
+                $endTime = $submission->endTime ?? null;
+                if (!empty($submission->user->aliases) && is_array($submission->user->aliases)) {
+                    $userName = $submission->user->aliases[0]->username ?? null;
+                }
+            } else {
+                // v3 flat shape (also a safe fallback if a flat body ever arrives)
+                $userName = $json_data->userName ?? null;
+                $endTime  = $json_data->endTime ?? null;
+            }
+        }
 
         // Validate the payload: a malformed/empty body or a non-completion event
         // (e.g. a "session started" notification, which carries no endTime) must not
         // be processed. Configure Intake24 to fire on "Survey session submitted".
-        if (!is_object($json_data) || empty($json_data->userName) || empty($json_data->endTime)) {
+        if (empty($userName) || empty($endTime)) {
             $this->logIntake24Event("Received an Intake24 notification with no userName/endTime; ignoring. Body: " . substr($raw_body, 0, 500), null, null);
             self::errorResponse("Invalid or incomplete Intake24 submission payload. Ensure the notification event is 'Survey session submitted'.");
         }
 
-        $record_id =  $json_data->userName;
-        $json_data_start_time = $json_data->endTime;
-        $tmpTime = explode('T',$json_data_start_time);
-        $survey_complete_time = implode('/',explode('-',$tmpTime[0])).' '.substr($tmpTime[1],0,5);
+        $record_id = $userName;
+        $json_data_start_time = $endTime;
+        // Intake24 sends endTime as a UTC ISO-8601 timestamp (e.g. 2026-07-23T11:48:33Z).
+        // Convert it to REDCap's server timezone so the recorded completion time matches
+        // REDCap's own timestamps and what the participant actually experienced. Format as
+        // Y-m-d H:i (dashes) — saveData interprets input as Y-M-D regardless of whether the
+        // field displays as dd/mm/yyyy or yyyy-mm-dd, and DateTimeZone handles DST correctly.
+        try {
+            $dt = new \DateTime($json_data_start_time);            // parses the ...Z / +00:00 as UTC
+            $dt->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+            $survey_complete_time = $dt->format('Y-m-d H:i');
+        }
+        catch (\Exception $e) {
+            // Fallback: literal slice (keeps working if the timestamp is unparseable)
+            $tmpTime = explode('T', $json_data_start_time);
+            $survey_complete_time = $tmpTime[0] . ' ' . substr($tmpTime[1], 0, 5);
+        }
 
         // log here to indicate it is being triggered
         $this->logIntake24Event("Intake24 survey completed time is $survey_complete_time", $record_id, null);
@@ -390,7 +426,7 @@ class Intake24Integration extends AbstractExternalModule
                     array($record_id_field => $record_id,
                         'redcap_event_name' => $event_name,
                         $completed_time2_field_name => $survey_complete_time,
-                        $schedule_time3_field_name => $this->calculateReminderDate($survey_complete_time)
+                        $schedule_time3_field_name => $this->calculateReminderDate($survey_complete_time, ($settings['reminder_days']['value'] ?? 3))
                     )
                 );
                 $this->logIntake24Event("Saved to recall 2 completed time", $record_id, null);
@@ -400,7 +436,7 @@ class Intake24Integration extends AbstractExternalModule
                     array($record_id_field => $record_id,
                         'redcap_event_name' => $event_name,
                         $completed_time1_field_name => $survey_complete_time,
-                        $schedule_time2_field_name => $this->calculateReminderDate($survey_complete_time)
+                        $schedule_time2_field_name => $this->calculateReminderDate($survey_complete_time, ($settings['reminder_days']['value'] ?? 3))
                     )
                 );
                 $this->logIntake24Event("Saved to recall 1 completed time", $record_id, null);
@@ -418,7 +454,7 @@ class Intake24Integration extends AbstractExternalModule
         }
     }
 
-    private function calculateReminderDate($completedTime)
+    private function calculateReminderDate($completedTime, $days = 3)
     {
         // $completedTime arrives as a date/time STRING (e.g. "2026-06-13 14:30:00" from
         // redcap_save_record, or "2026/06/13 14:30" from the Intake24 notification).
@@ -432,15 +468,24 @@ class Intake24Integration extends AbstractExternalModule
             $ts = time();
         }
 
+        // Number of days until the next reminder is configurable per project via the
+        // "reminder_days" setting (1-7). Anything outside that range (or unset, for
+        // backward compatibility with existing projects) falls back to 3.
+        $days = (int) $days;
+        if ($days < 1 || $days > 7) {
+            $days = 3;
+        }
+
         // ISO-8601 day of week: Monday = 1 ... Friday = 5 ... Sunday = 7.
         if ((int) date('N', $ts) === 5) {
-            // Completed on a Friday: send the reminder on Sunday morning (10:00),
-            // i.e. 2 days later, rather than the following Monday.
+            // Completed on a Friday: send the reminder on Sunday morning (10:00) rather
+            // than the following Monday. This weekend rule is intentionally independent
+            // of the configured day count.
             return date('Y-m-d', strtotime('+2 days', $ts)) . ' 10:00:00';
         }
 
-        // Otherwise the reminder goes out 3 days after completion, at the same time of day.
-        return date('Y-m-d H:i:s', strtotime('+3 days', $ts));
+        // Otherwise the reminder goes out $days days after completion, at the same time of day.
+        return date('Y-m-d H:i:s', strtotime("+{$days} days", $ts));
     }
 
     /**

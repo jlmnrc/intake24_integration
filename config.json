@@ -2,7 +2,7 @@
   "name": "Intake24.com Integration",
   "namespace": "Intake24\\Intake24Integration",
   "description": "This module will generate intake24.com user automatically and put the link at the specified REDCap field.",
-  "framework-version": 10,
+  "framework-version": 16,
   "authors": [
     {
       "name": "John Liman",
@@ -15,12 +15,13 @@
     "intake24_update"
   ],
 
+  "no-csrf-pages": [
+    "intake24_update"
+  ],
+
   "links": {
   },
 
-  "permissions": [
-    "redcap_save_record"
-  ],
 
   "project-settings": [
     {
@@ -161,6 +162,29 @@
       }
     },
     {
+      "name": "Number of days after a completed recall to schedule the next reminder (default 3)",
+      "key": "reminder_days",
+      "required": false,
+      "type": "dropdown",
+      "choices": [
+        { "value": "1", "name": "1 day" },
+        { "value": "2", "name": "2 days" },
+        { "value": "3", "name": "3 days (default)" },
+        { "value": "4", "name": "4 days" },
+        { "value": "5", "name": "5 days" },
+        { "value": "6", "name": "6 days" },
+        { "value": "7", "name": "7 days" }
+      ],
+      "branchingLogic": {
+        "conditions": [
+          {
+            "field": "schedule-enabled",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    {
       "name": "The instrument/form to be marked as completed when all 3 recalls are completed",
       "required": true,
       "key": "scheduling_instrument_name",
@@ -223,7 +247,7 @@
   "compatibility": {
     "php-version-min": "7.0.0",
     "php-version-max": "",
-    "redcap-version-min": "10.0.0",
+    "redcap-version-min": "14.6.4",
     "redcap-version-max": ""
   }
 }
