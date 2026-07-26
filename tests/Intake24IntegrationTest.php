@@ -93,6 +93,47 @@ class Intake24IntegrationTest extends \ExternalModules\ModuleBaseTest
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $result);
     }
 
+    // --- getTokenLifetimeSeconds --------------------------------------------
+
+    function testConfiguredLifetimeIsConvertedToSeconds()
+    {
+        $this->assertSame(90 * 86400, $this->callPrivate('getTokenLifetimeSeconds', '90'));
+        $this->assertSame(30 * 86400, $this->callPrivate('getTokenLifetimeSeconds', 30));
+        $this->assertSame(365 * 86400, $this->callPrivate('getTokenLifetimeSeconds', '365'));
+    }
+
+    function testOnlyAnExplicitZeroMeansNeverExpires()
+    {
+        // Null is the signal to omit the "exp" claim entirely. Returning 0 here
+        // would put "exp": <now> on the token and kill the link immediately.
+        $this->assertNull($this->callPrivate('getTokenLifetimeSeconds', 0));
+        $this->assertNull($this->callPrivate('getTokenLifetimeSeconds', '0'));
+    }
+
+    function testUnsavedSettingFallsBackToNinetyDayDefault()
+    {
+        // An untouched dropdown comes back as null or ''. Neither may be mistaken
+        // for the explicit "Never expires" choice.
+        $this->assertSame(90 * 86400, $this->callPrivate('getTokenLifetimeSeconds', null));
+        $this->assertSame(90 * 86400, $this->callPrivate('getTokenLifetimeSeconds', ''));
+    }
+
+    function testNegativeOrGarbageLifetimeFallsBackToTheDefault()
+    {
+        $this->assertSame(90 * 86400, $this->callPrivate('getTokenLifetimeSeconds', -5));
+        $this->assertSame(90 * 86400, $this->callPrivate('getTokenLifetimeSeconds', 'not-a-number'));
+    }
+
+    function testDefaultIsOverridable()
+    {
+        $this->assertSame(30 * 86400, $this->callPrivate('getTokenLifetimeSeconds', null, 30));
+    }
+
+    function testAbsurdLifetimeIsCapped()
+    {
+        $this->assertSame(3650 * 86400, $this->callPrivate('getTokenLifetimeSeconds', 999999));
+    }
+
     // --- base64Url helpers --------------------------------------------------
 
     function testBase64UrlRoundTripsBinaryData()

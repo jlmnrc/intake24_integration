@@ -26,10 +26,13 @@ class Intake24Integration extends AbstractExternalModule
         $schedule_enabled = $settings['schedule-enabled']['value'];
 
         // Which Intake24 generation this survey runs on. Different instances may run
-        // different versions, so this is configured per project. Default to v4.
+        // different versions, so this is configured per project. Default to v3 for
+        // projects saved before the setting existed, matching the fallback used when a
+        // completion notification arrives (see processApiRequest) so both halves of the
+        // module agree on the version for the same project.
         $intake24_version = $settings['intake24_version']['value'];
         if (empty($intake24_version)) {
-            $intake24_version = 'v4';
+            $intake24_version = 'v3';
         }
 
         $triggering_instrument_name = $settings['triggering_instrument_name']['value'];
@@ -60,24 +63,32 @@ class Intake24Integration extends AbstractExternalModule
                 // Create token payload as a JSON string. The claim names differ by version:
                 //   v3: { "user": <id>, "redirect": <url> }
                 //   v4: { "username": <id>, "exp": <ts>, "redirectUrl": <url> }
+                // ("exp" only when a lifetime is configured; see below.)
                 // In v4 "username" is lowercase and a wrong field name makes the
-                // create-user call return 400 silently. "exp" is a recommended expiry
-                // (v3 tokens never expired). In v4 "redirectUrl" is only echoed back to
-                // the caller, NOT used to send the participant anywhere; the post-survey
-                // hand-off is a redirect step in the Intake24 survey scheme instead.
+                // create-user call return 400 silently. In v4 "redirectUrl" is only echoed
+                // back to the caller, NOT used to send the participant anywhere; the
+                // post-survey hand-off is a redirect step in the Intake24 survey scheme
+                // instead.
                 if ($intake24_version === 'v3') {
                     $payload = json_encode(array(
                         'user'     => $calculated_user_id,
                         'redirect' => $redirect_url,
                     ));
                 } else {
-                    // Set the lifetime comfortably longer than your reminder window so
-                    // that links reused in reminder emails stay valid.
-                    $token_lifetime_days = 90;
                     $claims = array(
                         'username' => $calculated_user_id,
-                        'exp'      => time() + ($token_lifetime_days * 24 * 60 * 60),
                     );
+                    // Expiry, from the per-project "token_lifetime_days" setting, which
+                    // defaults to 90 days when unset. The clock starts HERE, when the link
+                    // is created, because the link is built once per record and then reused
+                    // for every recall and every reminder email — there is no re-issue at
+                    // send time, so the lifetime has to span enrolment to final recall.
+                    // Only the explicit "Never expires" choice omits the claim; the stored
+                    // URL is then a credential that never lapses, so hide that field.
+                    $token_lifetime = $this->getTokenLifetimeSeconds($settings['token_lifetime_days']['value'] ?? null);
+                    if ($token_lifetime !== null) {
+                        $claims['exp'] = time() + $token_lifetime;
+                    }
                     // redirectUrl is verified by Intake24 as a valid absolute URL, so only
                     // include it when it really is one; otherwise the create-user call is
                     // rejected. It is optional and not used for the in-app redirect (the
@@ -286,6 +297,8 @@ class Intake24Integration extends AbstractExternalModule
         // The notification is signed with the M2M secret. By default we reuse the
         // create-user secret (secret_key); set notification_secret only if your
         // Intake24 survey uses a different secret for external communication.
+        // Same v3 fallback as redcap_save_record: an unset version means a project saved
+        // before the setting existed, which can only have been a v3 survey.
         $intake24_version = $settings['intake24_version']['value'];
         if (empty($intake24_version)) {
             $intake24_version = 'v3';
@@ -452,6 +465,47 @@ class Intake24Integration extends AbstractExternalModule
         } else {
             self::errorResponse("Cannot find record $record_id.");
         }
+    }
+
+    /**
+     * Translates the configured "token_lifetime_days" setting into a number of
+     * seconds to add to "now" for the JWT "exp" claim.
+     *
+     * Returns NULL only when the link should never expire, so the caller can omit
+     * the claim altogether. Null rather than 0 matters: "exp": <now> would be a
+     * dead-on-arrival link.
+     *
+     * The default applies when the setting has never been saved (null, or the
+     * empty string an untouched dropdown yields) and when the stored value is not
+     * numeric. "Never expires" is therefore only ever reached by explicitly
+     * choosing it — a missing or corrupt value cannot silently produce a link that
+     * lives forever. The upper bound is a sanity cap for values that did not come
+     * from the dropdown.
+     *
+     * @param mixed $days    Configured lifetime in days (string from the settings).
+     * @param int   $default Days to use when nothing valid is configured.
+     * @return int|null Seconds until expiry, or null for no expiry.
+     */
+    private function getTokenLifetimeSeconds($days, $default = 90)
+    {
+        if (!is_numeric($days)) {
+            // Never saved, or something unparseable: use the documented default.
+            $days = $default;
+        }
+
+        $days = (int) $days;
+
+        if ($days === 0) {
+            return null; // the explicit "Never expires" choice
+        }
+        if ($days < 0) {
+            $days = $default;
+        }
+        if ($days > 3650) {
+            $days = 3650;
+        }
+
+        return $days * 24 * 60 * 60;
     }
 
     private function calculateReminderDate($completedTime, $days = 3)

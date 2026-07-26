@@ -30,8 +30,8 @@
       "required": true,
       "type": "dropdown",
       "choices": [
-        { "value": "v4", "name": "Intake24 v4 (path-based /create-user/ link)" },
-        { "value": "v3", "name": "Intake24 v3 (legacy ?createUser= link)" }
+        { "value": "v4", "name": "Intake24 v4" },
+        { "value": "v3", "name": "Intake24 v3" }
       ]
     },
     {
@@ -47,7 +47,7 @@
       "type": "text"
     },
     {
-      "name": "Intake24 Redirect URL stored in the JSON payload",
+      "name": "Intake24 Redirect URL, included in the JSON payload.<br>Must be a full absolute address (e.g. https://example.org/thanks); anything else is left out of the payload.<br><b>v3 only.</b> Intake24 v4 validates this value and then ignores it &mdash; it does <b>not</b> control where the participant goes after the recall. To send v4 participants somewhere afterwards, add a <i>redirect prompt</i> to your Intake24 survey scheme instead.",
       "required": true,
       "key": "redirect_url",
       "type": "text"
@@ -57,6 +57,24 @@
       "required": true,
       "key": "user_id",
       "type": "field-list"
+    },
+    {
+      "name": "How long should the participant's sign-in link stay valid?<br>Counted from when the link is created (when the triggering instrument is submitted) &mdash; <b>not</b> from when a reminder email is sent, because the same link is reused for every recall and reminder. Choose a period longer than the whole span from enrolment to a participant's final recall. Leave unset for 90 days.<br>Intake24 v4 only: v3 links never expire.",
+      "key": "token_lifetime_days",
+      "required": false,
+      "type": "dropdown",
+      "choices": [
+        { "value": "30", "name": "30 days" },
+        { "value": "60", "name": "60 days" },
+        { "value": "90", "name": "90 days (default)" },
+        { "value": "180", "name": "180 days (6 months)" },
+        { "value": "365", "name": "365 days (1 year)" },
+        { "value": "0", "name": "Never expires" }
+      ],
+      "branchingLogic": {
+        "field": "intake24_version",
+        "value": "v4"
+      }
     },
     {
       "name": "The instrument/form name that will trigger the creation of intake24 URL",
