@@ -222,7 +222,7 @@ Two things worth including, because they narrow it down quickly: **which Intake2
 **If you are a REDCap administrator or developer**, either of these is fine:
 
 - **Open an issue on GitHub:** [github.com/jlmnrc/intake24_integration](https://github.com/jlmnrc/intake24_integration/issues). Preferred for anything reproducible, and the best place for corrections to this document — it keeps the discussion attached to the code.
-- **Email the author.** On REDCap's External Modules page the author's name is a mailto link with the module and version already in the subject line, so clicking it there saves you looking anything up. Otherwise: john.liman@monash.edu.
+- **Email the author.** On REDCap's External Modules page the author's name is a mailto link with the module and version already in the subject line, so clicking it there saves you looking anything up.
 
 Useful to include: the module version, your REDCap version, your Intake24 version, the relevant lines from the project's **Logging** page (the module writes its own entries there), and whether scheduling is switched on.
 
