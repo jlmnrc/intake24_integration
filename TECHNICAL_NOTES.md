@@ -2,8 +2,6 @@
 
 *Companion to [README.md](README.md), which is the guide for research coordinators and project users. This file is for REDCap administrators and developers: what the module actually does under the hood, and what was verified about Intake24 itself.*
 
-> **How current is this?** Everything below describing *Intake24's own* behaviour — what it accepts in a token, which claims it acts on, what it does after a submission — was established on **26 July 2026** against **Intake24 v4, version `2026.2.0`** (source at commit `a974fea5`, 21 July 2026), by reading that source and posting module-signed tokens to a live instance of it.
->
 > Intake24 is actively developed, so treat these as findings with a date on them rather than a specification. If your instance runs a different version, or behaves differently from what's written here, **your instance is the authority — please report it** (an issue at [github.com/jlmnrc/intake24_integration](https://github.com/jlmnrc/intake24_integration/issues) is ideal, since it keeps the correction next to the code) **so this document can be fixed.** The parts describing *this module's* behaviour are read from the code in this repository and stay accurate as long as the version numbers match.
 >
 > Statements about **Intake24 v3** are the exception: they come from the module's existing implementation and its comments, not from v3 source, and are the least verified material in this document.
