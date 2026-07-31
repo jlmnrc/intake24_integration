@@ -106,6 +106,8 @@ Slot assignment is by first empty *completed* field: recall 3 populated → logg
 
 Failures are logged whether or not enforcement is on. With `require_signed_notifications` on, a failure returns HTTP 401; all other errors return 400.
 
+The whole block is inside `if ($intake24_version === 'v4')`, so on a v3 project neither `notification_secret` nor `require_signed_notifications` is ever read — the endpoint accepts any well-formed body for the configured project id. Both settings therefore branch on `intake24_version` = `v4` as well as `schedule-enabled`, so they are hidden rather than sitting on the configuration screen looking load-bearing.
+
 ## Reminder date calculation
 
 `calculateReminderDate($completedTime, $days)` converts the incoming string with `strtotime()` first — passing a date string straight to `date('N', ...)` was an earlier bug that coerced to a small integer and made every record look like a Thursday. `$days` comes from `reminder_days`, clamped to 1–7 and defaulting to 3 for projects saved before that setting existed. A Friday completion (`date('N') === 5`) returns `+2 days` at `10:00:00`; everything else returns `+$days` preserving the time of day. Output format is `Y-m-d H:i:s`.

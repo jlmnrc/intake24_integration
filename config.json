@@ -240,6 +240,10 @@
           {
             "field": "schedule-enabled",
             "value": "1"
+          },
+          {
+            "field": "intake24_version",
+            "value": "v4"
           }
         ]
       }
@@ -253,6 +257,10 @@
           {
             "field": "schedule-enabled",
             "value": "1"
+          },
+          {
+            "field": "intake24_version",
+            "value": "v4"
           }
         ]
       }

@@ -136,7 +136,7 @@ Version 4 signs each completion message, letting the module confirm it genuinely
 - **Secret for verifying incoming notifications** — leave **blank** in most cases and the module reuses the Secret Key you already entered. Fill it in only if your survey uses a different secret for external communication.
 - **Reject notifications that are not validly signed?** — **leave OFF to begin with.** The module writes the outcome to the REDCap log either way without turning anything away. Once a test recall shows *"signature verified"* in the log, switch it **ON** so unsigned or forged messages are refused.
 
-Version 3 doesn't sign its messages, so the module skips this check entirely for v3 projects. Leave the enforcement setting off there — turning it on would block every notification.
+Version 3 doesn't sign its messages, so the module skips this check entirely for v3 projects — completion messages are accepted on the strength of the address alone. Both settings above are hidden when the version is set to v3, because neither would have any effect there.
 
 #### Sending participants somewhere after the recall (optional)
 
