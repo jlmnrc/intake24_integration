@@ -227,21 +227,3 @@ Two things worth including, because they narrow it down quickly: **which Intake2
 Useful to include: the module version, your REDCap version, your Intake24 version, the relevant lines from the project's **Logging** page (the module writes its own entries there), and whether scheduling is switched on.
 
 **Corrections to this guide are genuinely welcome.** The notes on how Intake24 behaves were verified against one version at one point in time — see *A note on accuracy* above. If your instance does something different, that's worth knowing about, and your instance is the authority, not this document.
-
-## Citing this module
-
-If this module contributed to your study, a citation is appreciated — it's the only way work like this is visible to funders and promotion committees. It is not a condition of use; the module is free software under the GPL-3.0 licence.
-
-**The reference itself doesn't name a version** — it stays valid whichever release you used:
-
-> Liman J. *Intake24.com Integration: a REDCap external module.* https://github.com/jlmnrc/intake24_integration
-
-**State the version you actually ran in your methods prose instead**, where it belongs for reproducibility:
-
-> Participant account creation and the hand-off between REDCap and Intake24 were automated using the Intake24.com Integration REDCap external module (Liman J, Monash University), version *[the version you used]*.
-
-Keeping the two separate means your reference list doesn't go stale when the module is updated, while your methods still record exactly what you ran. You can find the version on REDCap's **External Modules** page, next to the module name.
-
-Please cite **Intake24** and **REDCap** as well — each has its own requirements, and this module doesn't stand in for either. Their websites carry the current wording.
-
-This module is an independent add-on: **not part of REDCap, and not part of or endorsed by Intake24.**
